@@ -1,0 +1,176 @@
+'use client';
+
+import { useState } from "react";
+import { Upload, ExternalLink } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { useFirebase } from "@/components/providers/firebase-provider";
+
+interface ChartAnalysis {
+  action: 'COMPRE' | 'VENDA';
+  asset: string;
+  timeframe: string;
+  entryTime: string;
+  confidence: number;
+}
+
+const IACamUpload = () => {
+  const { storage } = useFirebase();
+  
+  // Estados
+  const [dragActive, setDragActive] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [showUpload, setShowUpload] = useState(false);
+  const [activeTab, setActiveTab] = useState<'analysis' | 'traderoom'>('analysis');
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Funções de Upload
+  const handleFileUpload = async (file: File) => {
+    if (file) {
+      setIsLoading(true);
+      const reader = new FileReader();
+      
+      reader.onloadend = () => {
+        setSelectedImage(reader.result as string);
+        setShowUpload(true);
+        setIsLoading(false);
+      };
+      
+      reader.onerror = () => {
+        console.error("Erro ao ler o arquivo.");
+        setSelectedImage(null);
+        setShowUpload(false);
+        setIsLoading(false);
+      };
+      
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      await handleFileUpload(file);
+    }
+  };
+
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+
+    const file = e.dataTransfer.files?.[0];
+    if (file) {
+      await handleFileUpload(file);
+    }
+  };
+
+  const handleDrag = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setDragActive(true);
+    } else if (e.type === "dragleave") {
+      setDragActive(false);
+    }
+  };
+
+  return (
+    <Card className="p-6 bg-[hsl(45,15%,8%)]">
+      {/* Tabs Navigation */}
+      <div className="flex border-b border-[hsl(45,30%,20%)] mb-6" 
+           style={{background: 'linear-gradient(to bottom, hsl(45,25%,12%), hsl(45,20%,8%))'}}>
+        <button
+          onClick={() => setActiveTab('analysis')}
+          className={`flex-1 py-3 text-sm font-medium transition-colors ${
+            activeTab === 'analysis'
+              ? 'text-[hsl(45,100%,70%)] border-b-2 border-[hsl(45,100%,70%)]'
+              : 'text-[hsl(45,84%,90%)] hover:text-[hsl(45,80%,60%)]'
+          }`}
+        >
+          Análise
+        </button>
+        <button
+          onClick={() => setActiveTab('traderoom')}
+          className={`flex-1 py-3 text-sm font-medium transition-colors ${
+            activeTab === 'traderoom'
+              ? 'text-[hsl(45,100%,70%)] border-b-2 border-[hsl(45,100%,70%)]'
+              : 'text-[hsl(45,84%,90%)] hover:text-[hsl(45,80%,60%)]'
+          }`}
+        >
+          Trade Room
+        </button>
+      </div>
+
+      {/* Tab Content */}
+      {activeTab === 'analysis' ? (
+        <>
+          <Button 
+            variant="outline" 
+            size="lg" 
+            className="w-full mb-6 bg-[hsl(45,30%,15%)] text-[hsl(45,100%,70%)] border-[hsl(45,30%,20%)] hover:bg-[hsl(45,20%,18%)] hover:text-[hsl(45,80%,60%)] transition-colors"
+            onClick={() => window.open('https://stakbroker.com/traderoom', '_blank')}
+          >
+            <ExternalLink className="w-4 h-4 mr-2" />
+            Abrir em Nova Aba
+          </Button>
+
+          <div 
+            className="mt-4 p-6 border-2 border-dashed border-[hsl(45,30%,20%)] rounded-lg text-center cursor-pointer hover:border-[hsl(45,80%,60%)] transition-colors"
+            onClick={() => document.getElementById('fileInput')?.click()}
+            onDragEnter={handleDrag}
+            onDragLeave={handleDrag}
+            onDragOver={handleDrag}
+            onDrop={handleDrop}
+            style={{
+              background: 'linear-gradient(to bottom, hsl(45,25%,12%), hsl(45,20%,8%))'
+            }}
+          >
+            <input
+              type="file"
+              id="fileInput"
+              className="hidden"
+              accept="image/*"
+              onChange={handleFileSelect}
+            />
+            <div className="text-[hsl(45,100%,70%)]">
+              {isLoading ? (
+                <div className="animate-pulse">Processando...</div>
+              ) : (
+                <>
+                  <Upload className="w-8 h-8 mx-auto mb-2" />
+                  <p className="font-medium">Clique para fazer upload</p>
+                  <p className="text-sm text-[hsl(45,84%,90%)] mt-1">PNG, JPG ou JPEG</p>
+                </>
+              )}
+            </div>
+          </div>
+          
+          {/* Aviso sobre arquivos suportados */}
+          <p className="text-[hsl(45,84%,90%)] text-sm mt-4 text-center">
+            ✨ Dica: Você pode arrastar e soltar um arquivo ou clicar para selecionar
+          </p>
+        </>
+      ) : (
+        <div className="rounded-lg overflow-hidden border-2 border-[hsl(45,30%,20%)]" 
+             style={{
+               background: 'linear-gradient(to bottom, hsl(45,25%,12%), hsl(45,20%,8%))'
+             }}>
+          <div className="relative" style={{ paddingTop: '80vh' }}>
+            <iframe
+              src="https://stakbroker.com/traderoom"
+              className="absolute top-0 left-0 w-full h-full"
+              style={{ 
+                border: 'none',
+                minHeight: '800px'
+              }}
+              allow="fullscreen; accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            />
+          </div>
+        </div>
+      )}
+    </Card>
+  );
+};
+
+export default IACamUpload;
