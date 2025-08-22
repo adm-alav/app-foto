@@ -12,9 +12,11 @@ interface UserInfo {
 }
 
 class AuthService {
-  // Autenticar usuário com a Stakbroker via proxy local
+  // Autenticar usuário
   async login(userId: string): Promise<AuthResponse> {
     try {
+      console.log('Iniciando login para usuário:', userId);
+
       const response = await fetch('/api/auth', {
         method: 'POST',
         headers: {
@@ -24,13 +26,24 @@ class AuthService {
       });
 
       const data = await response.json();
+      console.log('Resposta do servidor:', data);
 
       if (!response.ok) {
         throw new Error(data.error || 'Falha na autenticação');
       }
 
+      if (!data.success) {
+        throw new Error(data.error || 'Credenciais inválidas');
+      }
+
+      // Se autenticado com sucesso, salva o token
+      if (data.token) {
+        localStorage.setItem('auth_token', data.token);
+      }
+
       return data;
     } catch (error: any) {
+      console.error('Erro no processo de login:', error);
       return {
         success: false,
         error: error.message || 'Erro ao autenticar'
@@ -43,29 +56,25 @@ class AuthService {
     try {
       const response = await fetch('/api/auth', {
         headers: {
-          'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         }
       });
 
       if (!response.ok) {
-        return null;
+        throw new Error('Token inválido');
       }
 
       const data = await response.json();
-      return {
-        id: data.id,
-        email: data.email,
-        isActive: data.isActive
-      };
+      return data.user || null;
     } catch (error) {
+      console.error('Erro na validação do token:', error);
       return null;
     }
   }
 
   // Fazer logout
   async logout(): Promise<void> {
-    // Limpar dados locais se necessário
+    localStorage.removeItem('auth_token');
   }
 }
 
