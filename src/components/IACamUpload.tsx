@@ -199,7 +199,7 @@ export default function IACamUpload() {
           <div className="flex items-center gap-6">
             <div className="flex items-center gap-2 bg-[#FFB800]/10 px-4 py-2 rounded-full">
               <span className="text-sm text-[#FFB800] font-medium">
-                R$ {balance.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                R$ {wallets[0]?.balance.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) || '0,00'}
               </span>
               <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
             </div>
