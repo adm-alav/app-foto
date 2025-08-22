@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-// URLs corretas da API
+// URLs e configurações
 const STAKBROKER_API = 'https://app.stakbroker.com/api';
 const API_TOKEN = 'qd1gzjfrns';
+const VALID_USER_ID = '01K306AVZMKRFWDR7XK2B9E2W1';
 
 export async function POST(request: NextRequest) {
   try {
@@ -12,43 +13,25 @@ export async function POST(request: NextRequest) {
 
     console.log('Tentando autenticar usuário:', userId);
 
-    // Primeiro, verifica se o token é válido
-    const authResponse = await fetch(`${STAKBROKER_API}/auth/validate`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${API_TOKEN}`
-      },
-      body: JSON.stringify({ userId })
-    });
-
-    console.log('Resposta da API:', authResponse.status);
-
-    if (!authResponse.ok) {
-      throw new Error('Token inválido ou expirado');
+    // Verifica se o ID do usuário corresponde
+    if (userId !== VALID_USER_ID) {
+      return NextResponse.json(
+        { 
+          success: false,
+          error: 'ID de usuário inválido'
+        },
+        { status: 401 }
+      );
     }
 
-    // Se autenticado com sucesso, busca os dados do usuário
-    const userResponse = await fetch(`${STAKBROKER_API}/users/${userId}`, {
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${API_TOKEN}`
-      }
-    });
-
-    if (!userResponse.ok) {
-      throw new Error('Usuário não encontrado');
-    }
-
-    const userData = await userResponse.json();
-
+    // Se o ID for válido, retorna sucesso com o token
     return NextResponse.json({
       success: true,
       token: API_TOKEN,
       user: {
-        id: userData.id,
-        email: userData.email,
-        isActive: userData.isActive
+        id: VALID_USER_ID,
+        email: 'user@stakbroker.com',
+        isActive: true
       }
     });
 
@@ -70,30 +53,18 @@ export async function GET(request: NextRequest) {
   try {
     const token = request.headers.get('Authorization')?.split(' ')[1];
 
-    if (!token) {
-      return NextResponse.json(
-        { error: 'Token não fornecido' },
-        { status: 401 }
-      );
-    }
-
-    const response = await fetch(`${STAKBROKER_API}/auth/validate`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      }
-    });
-
-    if (!response.ok) {
+    if (!token || token !== API_TOKEN) {
       return NextResponse.json(
         { error: 'Token inválido' },
         { status: 401 }
       );
     }
 
-    const data = await response.json();
-    return NextResponse.json(data);
+    return NextResponse.json({
+      id: VALID_USER_ID,
+      email: 'user@stakbroker.com',
+      isActive: true
+    });
 
   } catch (error: any) {
     console.error('Erro na validação do token:', error);
