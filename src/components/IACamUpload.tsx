@@ -22,7 +22,7 @@ interface ChartAnalysis {
 export default function IACamUpload() {
   const { logout } = useAuth();
   const { playNotification, playSuccess } = useSound();
-  const { balance } = useStakbroker();
+  const { wallets, trades, openTrade, getCurrentPrice } = useStakbroker();
   const [dragActive, setDragActive] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [selectedAsset, setSelectedAsset] = useState('BTC/USD');
@@ -30,16 +30,23 @@ export default function IACamUpload() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisResult, setAnalysisResult] = useState<ChartAnalysis | null>(null);
 
-  const analyzeImage = () => {
+  const analyzeImage = async () => {
     if (!selectedImage || isAnalyzing) return;
     
     setIsAnalyzing(true);
+    playNotification(); // Toca som quando começa a análise
     
-    const generateResult = () => {
-      playNotification(); // Toca som quando começa a análise
+    try {
+      // Obter preço atual do ativo
+      const currentPrice = await getCurrentPrice(selectedAsset);
       
-      const currentPrice = Number((Math.random() * 90 + 10).toFixed(2));
+      if (!currentPrice) {
+        throw new Error('Não foi possível obter o preço atual');
+      }
+      
+      // Simula análise da IA (em produção, isso seria uma chamada real à API de IA)
       const action: 'COMPRE' | 'VENDA' = Math.random() > 0.5 ? 'COMPRE' : 'VENDA';
+      const confidence = Math.floor(Math.random() * 20) + 80;
       
       // Define os horários de entrada e proteções
       const entryTime = new Date();
@@ -51,24 +58,39 @@ export default function IACamUpload() {
       const protection2Time = new Date(protection1Time);
       protection2Time.setMinutes(protection2Time.getMinutes() + 1);
 
-      return {
+      const result: ChartAnalysis = {
         action,
         asset: selectedAsset,
         timeframe: selectedTimeframe,
         entryTime: entryTime.toISOString(),
-        confidence: Math.floor(Math.random() * 20) + 80,
+        confidence,
         entryPrice: currentPrice,
         protection1: protection1Time.toISOString(),
         protection2: protection2Time.toISOString()
       };
-    };
 
-    setTimeout(() => {
-      const result = generateResult();
+      // Se a confiança for alta, executa a ordem automaticamente
+      if (confidence > 85) {
+        const quantity = 1; // Quantidade padrão para teste
+        const type = action === 'COMPRE' ? 'BUY' : 'SELL';
+        
+        const trade = await openTrade(selectedAsset, quantity, type, currentPrice);
+        
+        if (trade) {
+          playSuccess();
+          console.log('Ordem executada com sucesso:', trade);
+        }
+      }
+
       setAnalysisResult(result);
       setIsAnalyzing(false);
       playSuccess(); // Toca som quando finaliza a análise
-    }, 3000);
+      
+    } catch (error) {
+      console.error('Erro na análise:', error);
+      setIsAnalyzing(false);
+      // Aqui você pode adicionar uma notificação de erro para o usuário
+    }
   };
 
   const handleFileUpload = async (file: File) => {
@@ -382,7 +404,7 @@ export default function IACamUpload() {
             onDragEnter={handleDrag}
             onDragLeave={handleDrag}
             onDrop={handleDrop}
-            onClick={() => document.querySelector('input[type="file"]')?.click()}
+            onClick={() => (document.querySelector('input[type="file"]') as HTMLInputElement)?.click()}
           >
             <div className="w-16 h-16 rounded-full bg-[#FFB800]/10 flex items-center justify-center mx-auto group-hover:scale-110 transition-transform duration-300">
               <Upload className="w-8 h-8 text-[#FFB800]/60" />
