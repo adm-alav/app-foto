@@ -68,7 +68,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       // Usar os dados do usuário retornados no login
       setUser(result.user);
-      router.push('/');
+      router.push('/dashboard');
     } catch (error: any) {
       console.error('Erro no login:', error);
       throw error;
