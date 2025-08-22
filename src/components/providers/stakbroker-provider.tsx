@@ -4,50 +4,100 @@ import { createContext, useContext, useState, useEffect } from 'react';
 import { useAuth } from './auth-provider';
 import { stakbrokerService } from '@/lib/stakbroker-service';
 
-interface StakbrokerContextType {
+interface Trade {
+  id: string;
+  symbol: string;
+  quantity: number;
+  price: number;
+  type: 'BUY' | 'SELL';
+  status: string;
+  createdAt: string;
+}
+
+interface Wallet {
+  id: string;
   balance: number;
-  accountId: string | null;
+  currency: string;
+}
+
+interface StakbrokerContextType {
+  wallets: Wallet[];
+  trades: Trade[];
   isActive: boolean;
-  refreshBalance: () => Promise<void>;
+  refreshData: () => Promise<void>;
+  openTrade: (symbol: string, quantity: number, type: 'BUY' | 'SELL', price: number) => Promise<Trade | null>;
+  getCurrentPrice: (symbol: string) => Promise<number | null>;
 }
 
 const StakbrokerContext = createContext<StakbrokerContextType>({
-  balance: 0,
-  accountId: null,
+  wallets: [],
+  trades: [],
   isActive: false,
-  refreshBalance: async () => {},
+  refreshData: async () => {},
+  openTrade: async () => null,
+  getCurrentPrice: async () => null,
 });
 
 export function StakbrokerProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
-  const [balance, setBalance] = useState(0);
-  const [accountId, setAccountId] = useState<string | null>(null);
+  const [wallets, setWallets] = useState<Wallet[]>([]);
+  const [trades, setTrades] = useState<Trade[]>([]);
   const [isActive, setIsActive] = useState(false);
 
-  const refreshBalance = async () => {
-    if (user?.email && accountId) {
-      const accountInfo = await stakbrokerService.getAccountInfo(user.email, accountId);
-      if (accountInfo) {
-        setBalance(accountInfo.balance);
-        setIsActive(accountInfo.isActive);
+  // Configurar o token da API
+  useEffect(() => {
+    stakbrokerService.setApiKey('qd1gzjfrns');
+  }, []);
+
+  const refreshData = async () => {
+    try {
+      const userInfo = await stakbrokerService.getUserInfo();
+      if (userInfo) {
+        setIsActive(userInfo.isActive);
       }
+
+      const walletsData = await stakbrokerService.getWallets();
+      setWallets(walletsData);
+
+      const tradesData = await stakbrokerService.getTrades(1);
+      setTrades(tradesData);
+    } catch (error) {
+      console.error('Erro ao atualizar dados:', error);
     }
   };
 
-  useEffect(() => {
-    if (user?.email) {
-      stakbrokerService.verifyAccount(user.email).then((stakbrokerUser) => {
-        if (stakbrokerUser) {
-          setAccountId(stakbrokerUser.accountId);
-          setBalance(stakbrokerUser.balance);
-          setIsActive(stakbrokerUser.isActive);
-        }
-      });
+  const openTrade = async (
+    symbol: string,
+    quantity: number,
+    type: 'BUY' | 'SELL',
+    price: number
+  ): Promise<Trade | null> => {
+    const trade = await stakbrokerService.openTrade(symbol, quantity, type, price);
+    if (trade) {
+      setTrades(prevTrades => [trade, ...prevTrades]);
     }
-  }, [user]);
+    return trade;
+  };
+
+  const getCurrentPrice = async (symbol: string): Promise<number | null> => {
+    return stakbrokerService.getCurrentPrice(symbol);
+  };
+
+  useEffect(() => {
+    refreshData();
+  }, []);
 
   return (
-    <StakbrokerContext.Provider value={{ balance, accountId, isActive, refreshBalance }}>
+    <StakbrokerContext.Provider 
+      value={{ 
+        wallets, 
+        trades, 
+        isActive, 
+        refreshData, 
+        openTrade,
+        getCurrentPrice 
+      }}
+    >
       {children}
     </StakbrokerContext.Provider>
   );
