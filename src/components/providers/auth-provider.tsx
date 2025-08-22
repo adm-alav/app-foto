@@ -33,20 +33,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const token = localStorage.getItem('auth_token');
+        const token = authService.getToken();
         if (token) {
           const userData = await authService.validateToken(token);
           if (userData) {
             setUser(userData);
+            if (window.location.pathname === '/login') {
+              router.push('/dashboard');
+            }
           } else {
-            localStorage.removeItem('auth_token');
-            router.push('/login');
+            await authService.logout();
+            if (window.location.pathname !== '/login') {
+              router.push('/login');
+            }
           }
+        } else if (window.location.pathname !== '/login') {
+          router.push('/login');
         }
       } catch (error) {
         console.error('Erro ao verificar autenticação:', error);
-        localStorage.removeItem('auth_token');
-        router.push('/login');
+        await authService.logout();
+        if (window.location.pathname !== '/login') {
+          router.push('/login');
+        }
       } finally {
         setLoading(false);
       }
@@ -63,10 +72,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw new Error(result.error || 'Falha na autenticação');
       }
 
-      // Salvar token
-      localStorage.setItem('auth_token', result.token);
-
-      // Usar os dados do usuário retornados no login
       setUser(result.user);
       router.push('/dashboard');
     } catch (error: any) {
@@ -78,7 +83,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logout = async () => {
     try {
       await authService.logout();
-      localStorage.removeItem('auth_token');
       setUser(null);
       router.push('/login');
     } catch (error) {

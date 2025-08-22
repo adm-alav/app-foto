@@ -36,9 +36,9 @@ class AuthService {
         throw new Error(data.error || 'Credenciais inválidas');
       }
 
-      // Se autenticado com sucesso, salva o token
+      // Se autenticado com sucesso, salva o token em cookie
       if (data.token) {
-        localStorage.setItem('auth_token', data.token);
+        document.cookie = `auth_token=${data.token}; path=/; max-age=86400; secure; samesite=strict`;
       }
 
       return data;
@@ -74,7 +74,14 @@ class AuthService {
 
   // Fazer logout
   async logout(): Promise<void> {
-    localStorage.removeItem('auth_token');
+    document.cookie = 'auth_token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+  }
+
+  // Obter token do cookie
+  getToken(): string | null {
+    const cookies = document.cookie.split(';');
+    const tokenCookie = cookies.find(cookie => cookie.trim().startsWith('auth_token='));
+    return tokenCookie ? tokenCookie.split('=')[1] : null;
   }
 }
 
