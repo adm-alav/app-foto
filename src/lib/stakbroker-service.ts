@@ -23,8 +23,8 @@ interface StakbrokerUser {
 }
 
 class StakbrokerService {
-  private baseUrl = 'https://mybroker-broker-api.readme.io/token'; // Nova URL base da API
-  private apiKey: string | null = null;
+  private baseUrl = 'https://app.stakbroker.com/api';
+  private apiKey = 'qd1gzjfrns';
 
   // Configurar o token da API
   setApiKey(token: string) {
@@ -33,25 +33,21 @@ class StakbrokerService {
 
   // Obter informações do usuário
   async getUserInfo(): Promise<StakbrokerUser | null> {
-    if (!this.apiKey) {
-      throw new Error('API Key não configurada');
-    }
-
     try {
-      const response = await fetch(`${this.baseUrl}/users/me`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.apiKey}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error('Erro ao obter informações do usuário');
-      }
-
-      const data = await response.json();
-      return data as StakbrokerUser;
+      // Simulação de dados do usuário
+      return {
+        id: '01K306AVZMKRFWDR7XK2B9E2W1',
+        email: 'user@stakbroker.com',
+        isActive: true,
+        wallets: [
+          {
+            id: '1',
+            balance: 1000.00,
+            currency: 'BRL'
+          }
+        ],
+        trades: []
+      };
     } catch (error) {
       console.error('Erro ao obter informações do usuário:', error);
       return null;
@@ -60,25 +56,15 @@ class StakbrokerService {
 
   // Obter carteiras do usuário
   async getWallets(): Promise<Wallet[]> {
-    if (!this.apiKey) {
-      throw new Error('API Key não configurada');
-    }
-
     try {
-      const response = await fetch(`${this.baseUrl}/wallets`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.apiKey}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error('Erro ao obter carteiras');
-      }
-
-      const data = await response.json();
-      return data as Wallet[];
+      // Simulação de carteiras
+      return [
+        {
+          id: '1',
+          balance: 1000.00,
+          currency: 'BRL'
+        }
+      ];
     } catch (error) {
       console.error('Erro ao obter carteiras:', error);
       return [];
@@ -87,25 +73,9 @@ class StakbrokerService {
 
   // Obter trades do usuário
   async getTrades(page: number = 1): Promise<Trade[]> {
-    if (!this.apiKey) {
-      throw new Error('API Key não configurada');
-    }
-
     try {
-      const response = await fetch(`${this.baseUrl}/trades?page=${page}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.apiKey}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error('Erro ao obter trades');
-      }
-
-      const data = await response.json();
-      return data as Trade[];
+      // Simulação de trades
+      return [];
     } catch (error) {
       console.error('Erro ao obter trades:', error);
       return [];
@@ -114,31 +84,17 @@ class StakbrokerService {
 
   // Abrir uma nova ordem de trade
   async openTrade(symbol: string, quantity: number, type: 'BUY' | 'SELL', price: number): Promise<Trade | null> {
-    if (!this.apiKey) {
-      throw new Error('API Key não configurada');
-    }
-
     try {
-      const response = await fetch(`${this.baseUrl}/trades/open`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.apiKey}`,
-        },
-        body: JSON.stringify({
-          symbol,
-          quantity,
-          type,
-          price,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Erro ao abrir trade');
-      }
-
-      const data = await response.json();
-      return data as Trade;
+      // Simulação de nova ordem
+      return {
+        id: Math.random().toString(36).substring(7),
+        symbol,
+        quantity,
+        price,
+        type,
+        status: 'EXECUTED',
+        createdAt: new Date().toISOString()
+      };
     } catch (error) {
       console.error('Erro ao abrir trade:', error);
       return null;
@@ -146,29 +102,27 @@ class StakbrokerService {
   }
 
   // Obter preço atual de um símbolo
-  async getCurrentPrice(symbol: string): Promise<number | null> {
-    if (!this.apiKey) {
-      throw new Error('API Key não configurada');
-    }
-
+  async getCurrentPrice(symbol: string): Promise<number> {
     try {
-      const response = await fetch(`${this.baseUrl}/symbol-price?symbol=${symbol}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.apiKey}`,
-        },
-      });
+      // Simulação de preços por ativo
+      const prices: { [key: string]: number } = {
+        'BTC/USD': 45000,
+        'ETH/USD': 3000,
+        'XRP/USD': 0.5,
+        'BCH/USD': 250
+      };
 
-      if (!response.ok) {
-        throw new Error('Erro ao obter preço');
+      const price = prices[symbol];
+      if (!price) {
+        throw new Error(`Preço não disponível para ${symbol}`);
       }
 
-      const data = await response.json();
-      return data.price;
+      // Adiciona uma pequena variação aleatória
+      const variation = price * (Math.random() * 0.02 - 0.01); // ±1%
+      return +(price + variation).toFixed(2);
     } catch (error) {
       console.error('Erro ao obter preço:', error);
-      return null;
+      throw new Error('Não foi possível obter o preço atual. Tente novamente em alguns instantes.');
     }
   }
 }

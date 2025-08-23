@@ -49,6 +49,7 @@ export default function IACamUpload() {
       
       if (!currentPrice) {
         throw new Error('Não foi possível obter o preço atual. Tente novamente em alguns instantes.');
+      }
       
       // Simula análise da IA (em produção, isso seria uma chamada real à API de IA)
       const action: 'COMPRE' | 'VENDA' = Math.random() > 0.5 ? 'COMPRE' : 'VENDA';
@@ -192,8 +193,8 @@ export default function IACamUpload() {
       background: 'linear-gradient(145deg, #1a1505, #1f1a08)',
       boxShadow: '0 4px 60px rgba(255, 184, 0, 0.15)',
     }}>
-      <div className="fixed top-0 left-0 right-0 bg-gradient-to-r from-[#1a1505] to-[#1f1a08] border-b border-[#FFB800]/20 z-10">
-        <div className="flex items-center justify-between max-w-4xl mx-auto px-6 py-4">
+      <div className="fixed top-0 left-0 right-0 bg-gradient-to-r from-[#1a1505] to-[#1f1a08] border-b border-[#FFB800]/20 z-50">
+        <div className="flex items-center justify-between max-w-7xl mx-auto px-6 py-4">
           <div className="flex items-center gap-3">
             <span className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-[#FFB800] to-[#FFA000]">
               IACAM
