@@ -1,133 +1,82 @@
 'use client';
 
 import { useState } from "react";
+import { Upload } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useAuth } from "@/components/providers/auth-provider";
 import { useSound } from "@/hooks/use-sound";
 import { useStakbroker } from "@/components/providers/stakbroker-provider";
-import SignalConfig, { SignalConfig as SignalConfigType } from './signal-config';
 
 interface ChartAnalysis {
   action: 'COMPRE' | 'VENDA';
   asset: string;
   timeframe: string;
   entryTime: string;
-  confidence: number;
   protection1: string;
   protection2: string;
-  entryPrice: number;
 }
 
 export default function IACamUpload() {
   const { logout } = useAuth();
   const { playNotification, playSuccess } = useSound();
-  const { wallets, trades, openTrade, getCurrentPrice } = useStakbroker();
+  const { wallets } = useStakbroker();
+  const [dragActive, setDragActive] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [selectedAsset, setSelectedAsset] = useState('BTC/USDT');
+  const [selectedTimeframe, setSelectedTimeframe] = useState('M1');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisResult, setAnalysisResult] = useState<ChartAnalysis | null>(null);
 
-  const handleGenerateSignal = async (config: SignalConfigType) => {
-    setIsAnalyzing(true);
-    playNotification();
+  const generateSignalTimes = (timeframe: string, baseTime: Date) => {
+    const entryTime = baseTime;
+    const protection1 = new Date(entryTime);
+    const protection2 = new Date(entryTime);
 
-    try {
-      // Simular análise com base na configuração
-      const currentPrice = await getCurrentPrice('BTC/USD');
-      
-      const result: ChartAnalysis = {
-        action: config.direction === 'PUT' ? 'VENDA' : 'COMPRE',
-        asset: 'BTC/USD',
-        timeframe: config.timeframe,
-        entryTime: config.startTime,
-        confidence: config.percentage,
-        entryPrice: currentPrice,
-        protection1: config.startTime,
-        protection2: config.endTime
-      };
-
-      if (config.percentage > 85) {
-        const trade = await openTrade('BTC/USD', 1, config.direction === 'PUT' ? 'SELL' : 'BUY', currentPrice);
-        if (trade) {
-          playSuccess();
-        }
-      }
-
-      setAnalysisResult(result);
-      setIsAnalyzing(false);
-      playSuccess();
-    } catch (error) {
-      console.error('Erro ao gerar sinal:', error);
-      setIsAnalyzing(false);
-      alert(error instanceof Error ? error.message : 'Erro ao gerar sinal');
+    if (timeframe === 'M1') {
+      protection1.setMinutes(protection1.getMinutes() + 1);
+      protection2.setMinutes(protection2.getMinutes() + 2);
+    } else { // M5
+      protection1.setMinutes(protection1.getMinutes() + 6);
+      protection2.setMinutes(protection2.getMinutes() + 12);
     }
+
+    return {
+      entry: entryTime.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+      prot1: protection1.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+      prot2: protection2.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+    };
   };
 
   const analyzeImage = async () => {
     if (!selectedImage || isAnalyzing) return;
     
     setIsAnalyzing(true);
-    playNotification(); // Toca som quando começa a análise
+    playNotification();
     
     try {
-      // Validar se a imagem contém candlestick (simulação - em produção seria uma verificação real)
-      const isCandlestickChart = true; // Aqui seria uma verificação real com IA
+      // Gerar horários baseados no momento atual
+      const times = generateSignalTimes(selectedTimeframe, new Date());
       
-      if (!isCandlestickChart) {
-        throw new Error('A imagem não parece conter um gráfico de candlestick válido');
-      }
-
-      // Obter preço atual do ativo
-      const currentPrice = await getCurrentPrice(selectedAsset);
-      
-      if (!currentPrice) {
-        throw new Error('Não foi possível obter o preço atual. Tente novamente em alguns instantes.');
-      }
-      
-      // Simula análise da IA (em produção, isso seria uma chamada real à API de IA)
+      // Gerar direção aleatória
       const action: 'COMPRE' | 'VENDA' = Math.random() > 0.5 ? 'COMPRE' : 'VENDA';
-      const confidence = Math.floor(Math.random() * 20) + 80;
-      
-      // Define os horários de entrada e proteções
-      const entryTime = new Date();
-      entryTime.setMinutes(entryTime.getMinutes() + 1);
-      
-      const protection1Time = new Date(entryTime);
-      protection1Time.setMinutes(protection1Time.getMinutes() + 1);
-      
-      const protection2Time = new Date(protection1Time);
-      protection2Time.setMinutes(protection2Time.getMinutes() + 1);
 
       const result: ChartAnalysis = {
         action,
         asset: selectedAsset,
         timeframe: selectedTimeframe,
-        entryTime: entryTime.toISOString(),
-        confidence,
-        entryPrice: currentPrice,
-        protection1: protection1Time.toISOString(),
-        protection2: protection2Time.toISOString()
+        entryTime: times.entry,
+        protection1: times.prot1,
+        protection2: times.prot2
       };
-
-      // Se a confiança for alta, executa a ordem automaticamente
-      if (confidence > 85) {
-        const quantity = 1; // Quantidade padrão para teste
-        const type = action === 'COMPRE' ? 'BUY' : 'SELL';
-        
-        const trade = await openTrade(selectedAsset, quantity, type, currentPrice);
-        
-        if (trade) {
-          playSuccess();
-          console.log('Ordem executada com sucesso:', trade);
-        }
-      }
 
       setAnalysisResult(result);
       setIsAnalyzing(false);
-      playSuccess(); // Toca som quando finaliza a análise
-      
+      playSuccess();
     } catch (error) {
       console.error('Erro na análise:', error);
       setIsAnalyzing(false);
-      alert(error instanceof Error ? error.message : 'Erro ao analisar imagem');
+      alert('Erro ao gerar sinal. Tente novamente.');
     }
   };
 
@@ -148,38 +97,7 @@ export default function IACamUpload() {
       const reader = new FileReader();
       
       reader.onloadend = () => {
-        const imageUrl = reader.result as string;
-        
-        // Comprimir imagem antes de salvar
-        const img = new Image();
-        img.onload = () => {
-          const canvas = document.createElement('canvas');
-          const ctx = canvas.getContext('2d');
-          
-          // Define o tamanho máximo mantendo a proporção
-          const maxSize = 1200;
-          let width = img.width;
-          let height = img.height;
-          
-          if (width > height && width > maxSize) {
-            height *= maxSize / width;
-            width = maxSize;
-          } else if (height > maxSize) {
-            width *= maxSize / height;
-            height = maxSize;
-          }
-          
-          canvas.width = width;
-          canvas.height = height;
-          
-          ctx?.drawImage(img, 0, 0, width, height);
-          
-          // Converter para WebP com qualidade reduzida
-          const compressedImageUrl = canvas.toDataURL('image/webp', 0.8);
-          setSelectedImage(compressedImageUrl);
-        };
-        
-        img.src = imageUrl;
+        setSelectedImage(reader.result as string);
       };
       
       reader.onerror = () => {
@@ -241,17 +159,6 @@ export default function IACamUpload() {
               </span>
               <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
             </div>
-            <a 
-              href="https://stakbroker.com/traderoom"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-sm text-[#FFB800]/80 hover:text-[#FFB800] transition-colors flex items-center gap-1"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-              </svg>
-              stakbroker.com
-            </a>
             <button
               onClick={logout}
               className="text-sm bg-[#FFB800]/10 hover:bg-[#FFB800]/20 text-[#FFB800] px-4 py-2 rounded-full transition-colors flex items-center gap-2"
@@ -279,124 +186,166 @@ export default function IACamUpload() {
               <span className="animate-pulse text-[#FFB800] text-3xl -rotate-12">✨</span>
             </div>
             <p className="text-[#FFB800]/60 max-w-md">
-              Gerador de Sinais Automático
+              Upload do gráfico para análise e geração de sinais
             </p>
           </div>
         </div>
-        <p className="text-[#FFB800]/80 text-lg font-medium">
-          Configuração de Sinais
-        </p>
-        <div className="w-24 h-1 bg-gradient-to-r from-transparent via-[#FFB800]/20 to-transparent mx-auto" />
       </div>
 
-      <SignalConfig onGenerateSignal={handleGenerateSignal} />
+      {selectedImage && (
+        <div className="mb-6 rounded-lg overflow-hidden bg-[#0a0a0a]">
+          <h3 className="text-[#FFB800] text-lg p-4 border-b border-[#FFB800]/20">
+            Gráfico Carregado
+          </h3>
+          <div className="p-4">
+            <img src={selectedImage} alt="Gráfico carregado" className="w-full rounded" />
+          </div>
+        </div>
+      )}
 
-      {analysisResult && (
-        <div className="space-y-8">
-          <div className="bg-gradient-to-b from-[#FFB800]/10 to-transparent p-8 rounded-2xl text-center">
-            <div className="flex flex-col items-center justify-center mb-6">
-              <div className="inline-flex items-center justify-center p-4 rounded-full bg-[#FFB800]/20 mb-4">
-                <div className={`text-4xl font-bold ${
-                  analysisResult.action === 'COMPRE' ? 'text-green-400' : 'text-red-400'
-                }`}>
-                  {analysisResult.action}
-                </div>
+      {selectedImage && !isAnalyzing && !analysisResult && (
+        <div className="mb-6 rounded-lg overflow-hidden bg-[#0a0a0a]">
+          <h3 className="text-[#FFB800] text-lg p-4 border-b border-[#FFB800]/20">
+            Configurar Análise
+          </h3>
+          <div className="p-4 space-y-4">
+            <div>
+              <p className="text-[#FFB800]/80 mb-3">Selecione o Ativo</p>
+              <div className="grid grid-cols-2 gap-3">
+                {['BTC/USDT', 'ETH/USDT', 'XRP/USDT', 'SOL/USDT'].map((asset) => (
+                  <Button 
+                    key={asset}
+                    variant="outline"
+                    onClick={() => setSelectedAsset(asset)}
+                    className={`${
+                      selectedAsset === asset 
+                        ? 'bg-[#FFB800]/20 text-[#FFB800] border-[#FFB800]' 
+                        : 'text-[#FFB800]/60 border-[#FFB800]/20 hover:border-[#FFB800]/40'
+                    }`}
+                  >
+                    {asset}
+                  </Button>
+                ))}
               </div>
-              
-              <a 
-                href="https://stakbroker.com/traderoom"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 px-6 py-3 bg-[#FFB800] text-black rounded-lg hover:bg-[#FFB800]/90 transition-all duration-300 font-medium"
-              >
-                Abrir Corretora
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
-                  <polyline points="15 3 21 3 21 9"></polyline>
-                  <line x1="10" y1="14" x2="21" y2="3"></line>
-                </svg>
-              </a>
             </div>
-            
-            <div className="space-y-6 mt-6">
-              <div className="grid grid-cols-3 gap-4">
-                <div className="p-4 rounded-xl bg-[#FFB800]/5 border border-[#FFB800]/10">
-                  <p className="text-[#FFB800]/60 text-sm mb-1">Ativo</p>
-                  <p className="text-[#FFB800] font-semibold">{analysisResult.asset}</p>
-                </div>
-                <div className="p-4 rounded-xl bg-[#FFB800]/5 border border-[#FFB800]/10">
-                  <p className="text-[#FFB800]/60 text-sm mb-1">Timeframe</p>
-                  <p className="text-[#FFB800] font-semibold">{analysisResult.timeframe}</p>
-                </div>
-                <div className="p-4 rounded-xl bg-[#FFB800]/5 border border-[#FFB800]/10">
-                  <p className="text-[#FFB800]/60 text-sm mb-1">Confiança</p>
-                  <p className="text-[#FFB800] font-semibold">{analysisResult.confidence}%</p>
-                </div>
-              </div>
 
-              <div className="bg-[#FFB800]/5 rounded-xl p-4 border border-[#FFB800]/10">
-                <div className="grid grid-cols-4 gap-4">
-                  <div>
-                    <p className="text-[#FFB800]/60 text-sm mb-1">Entrada em</p>
-                    <p className="text-[#FFB800] font-semibold">
-                      {new Date(analysisResult.entryTime).toLocaleTimeString('pt-BR', { 
-                        hour: '2-digit', 
-                        minute: '2-digit' 
-                      })}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-[#FFB800]/60 text-sm mb-1">Preço</p>
-                    <p className="text-[#FFB800] font-semibold">{analysisResult.entryPrice}</p>
-                  </div>
-                  <div>
-                    <p className="text-[#FFB800]/60 text-sm mb-1">Proteção 1</p>
-                    <p className="text-red-400 font-semibold">
-                      {new Date(analysisResult.protection1).toLocaleTimeString('pt-BR', { 
-                        hour: '2-digit', 
-                        minute: '2-digit' 
-                      })}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-[#FFB800]/60 text-sm mb-1">Proteção 2</p>
-                    <p className="text-red-400 font-semibold">
-                      {new Date(analysisResult.protection2).toLocaleTimeString('pt-BR', { 
-                        hour: '2-digit', 
-                        minute: '2-digit' 
-                      })}
-                    </p>
-                  </div>
-                </div>
+            <div>
+              <p className="text-[#FFB800]/80 mb-3">Selecione o Timeframe</p>
+              <div className="grid grid-cols-2 gap-3">
+                {['M1', 'M5'].map((tf) => (
+                  <Button 
+                    key={tf}
+                    variant="outline"
+                    onClick={() => setSelectedTimeframe(tf)}
+                    className={`${
+                      selectedTimeframe === tf 
+                        ? 'bg-[#FFB800]/20 text-[#FFB800] border-[#FFB800]' 
+                        : 'text-[#FFB800]/60 border-[#FFB800]/20 hover:border-[#FFB800]/40'
+                    }`}
+                  >
+                    {tf}
+                  </Button>
+                ))}
               </div>
+            </div>
+
+            <Button
+              onClick={analyzeImage}
+              disabled={isAnalyzing}
+              className="w-full h-14 bg-[#FFB800] text-black hover:bg-[#FFB800]/90 hover:scale-[1.02] text-lg font-medium tracking-wider shadow-lg shadow-[#FFB800]/10 transition-all duration-300"
+            >
+              {isAnalyzing ? 'ANALISANDO...' : 'GERAR SINAL'}
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {isAnalyzing && (
+        <div className="space-y-8 text-center py-12">
+          <div className="relative">
+            <div className="w-16 h-16 border-4 border-[#FFB800]/20 border-t-[#FFB800] rounded-full animate-spin mx-auto" />
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="w-8 h-8 bg-[#FFB800]/10 rounded-full animate-pulse" />
             </div>
           </div>
+          <div>
+            <div className="text-xl font-medium text-[#FFB800] mb-3">Analisando...</div>
+            <div className="text-[#FFB800]/60">
+              Gerando sinal...
+            </div>
+          </div>
+        </div>
+      )}
 
-          <div className="space-y-3">
-            <div className="space-y-4">
-              <Button
-                onClick={() => {
-                  setSelectedImage(null);
-                  setAnalysisResult(null);
-                }}
-                className="w-full h-12 bg-transparent border border-[#FFB800]/20 text-[#FFB800]/80 hover:bg-[#FFB800]/5 hover:border-[#FFB800]/40 transition-all duration-300"
-              >
-                Analisar Novo Gráfico
-              </Button>
-              
-              <p className="text-center text-[#FFB800]/60 text-sm px-4">
-                Este sistema funciona exclusivamente na{' '}
-                <a 
-                  href="https://stakbroker.com/traderoom" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="text-[#FFB800] hover:underline"
-                >
-                  Stak Broker
-                </a>
+      {!selectedImage && !isAnalyzing && (
+        <div 
+          className={`
+            border-2 border-dashed rounded-lg p-8 text-center space-y-4 cursor-pointer
+            transition-all duration-300 group
+            ${dragActive 
+              ? 'border-[#FFB800] bg-[#FFB800]/10' 
+              : 'border-[#FFB800]/20 hover:border-[#FFB800]/40 hover:bg-[#FFB800]/5'
+            }
+          `}
+          onDragOver={handleDrag}
+          onDragEnter={handleDrag}
+          onDragLeave={handleDrag}
+          onDrop={handleDrop}
+          onClick={() => (document.querySelector('input[type="file"]') as HTMLInputElement)?.click()}
+        >
+          <div className="w-16 h-16 rounded-full bg-[#FFB800]/10 flex items-center justify-center mx-auto group-hover:scale-110 transition-transform duration-300">
+            <Upload className="w-8 h-8 text-[#FFB800]/60" />
+          </div>
+          <div>
+            <h3 className="text-[#FFB800] text-xl mb-2">
+              {dragActive ? 'Solte o arquivo aqui' : 'Carregar Gráfico'}
+            </h3>
+            <div className="space-y-2">
+              <p className="text-[#FFB800]/60">
+                Arraste e solte ou clique para selecionar
+              </p>
+              <p className="text-[#FFB800]/40 text-sm">
+                Importante: O gráfico deve conter candlesticks visíveis
               </p>
             </div>
           </div>
+          <input
+            type="file"
+            className="hidden"
+            accept="image/*"
+            onChange={handleFileSelect}
+          />
+        </div>
+      )}
+
+      {analysisResult && (
+        <div className="space-y-8">
+          <div className="bg-gradient-to-b from-[#FFB800]/10 to-transparent p-8 rounded-2xl">
+            <div className="space-y-4 text-[#FFB800]">
+              <p className="font-bold">CORRETORA RECOMENDADA: STAK BROKER</p>
+              <p>🥇 Moeda = {analysisResult.asset}</p>
+              <p>⏰ Expiração = {analysisResult.timeframe}</p>
+              <p>📌 Entrada = {analysisResult.entryTime}</p>
+              <p>{analysisResult.action === 'COMPRE' ? '✅COMPRA' : '❌VENDA'}</p>
+              <p></p>
+              <p>📌Proteção 1: {analysisResult.protection1}</p>
+              <p>📌Proteção 2: {analysisResult.protection2}</p>
+              <p></p>
+              <p>OBS: ENTREM 2s antes</p>
+              <p></p>
+              <p>⚠️ FAÇAM NO MÁXIMO DUAS PROTEÇÕES!</p>
+            </div>
+          </div>
+
+          <Button
+            onClick={() => {
+              setSelectedImage(null);
+              setAnalysisResult(null);
+            }}
+            className="w-full h-12 bg-transparent border border-[#FFB800]/20 text-[#FFB800]/80 hover:bg-[#FFB800]/5 hover:border-[#FFB800]/40 transition-all duration-300"
+          >
+            Gerar Novo Sinal
+          </Button>
         </div>
       )}
     </Card>
