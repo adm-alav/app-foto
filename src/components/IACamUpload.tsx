@@ -1,13 +1,15 @@
 'use client';
 
-import { useState } from "react";
-import { Upload, LineChart, Loader2 } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Upload, LineChart, Loader2, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useAuth } from "@/components/providers/auth-provider";
 import { useSound } from "@/hooks/use-sound";
 import { useStakbroker } from "@/components/providers/stakbroker-provider";
 import { validateChartImage } from "@/lib/chart-validator";
+import { SignalAnimation } from "@/components/ui/signal-animation";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface ChartAnalysis {
   action: 'COMPRE' | 'VENDA';
@@ -49,32 +51,21 @@ export default function IACamUpload() {
     };
   };
 
-  const [analysisSteps, setAnalysisSteps] = useState<string[]>([]);
+  const [currentStep, setCurrentStep] = useState(0);
+  const [showSuccess, setShowSuccess] = useState(false);
 
   const analyzeImage = async () => {
     if (!selectedImage || isAnalyzing) return;
     
     setIsAnalyzing(true);
-    setAnalysisSteps([]);
+    setCurrentStep(1);
     playNotification();
     
     try {
-      // Simula análise detalhada
-      const steps = [
-        'Identificando padrões de candlestick...',
-        'Analisando tendência do mercado...',
-        'Calculando níveis de suporte e resistência...',
-        'Verificando indicadores técnicos...',
-        'Avaliando momentum do mercado...',
-        'Gerando previsão de movimento...',
-        'Calculando pontos de entrada...',
-        'Definindo níveis de proteção...',
-        'Finalizando análise...'
-      ];
-
-      for (const step of steps) {
-        setAnalysisSteps(prev => [...prev, step]);
-        await new Promise(resolve => setTimeout(resolve, 800));
+      // Simula análise detalhada com passos
+      for (let step = 1; step <= 6; step++) {
+        setCurrentStep(step);
+        await new Promise(resolve => setTimeout(resolve, 1500));
       }
 
       // Gerar horários baseados no momento atual
@@ -93,8 +84,11 @@ export default function IACamUpload() {
       };
 
       setAnalysisResult(result);
-      setIsAnalyzing(false);
+      setShowSuccess(true);
       playSuccess();
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      setShowSuccess(false);
+      setIsAnalyzing(false);
     } catch (error) {
       console.error('Erro na análise:', error);
       setIsAnalyzing(false);
@@ -303,33 +297,78 @@ export default function IACamUpload() {
         </div>
       )}
 
-      {(isAnalyzing || isValidating) && (
-        <div className="space-y-8 text-center py-12">
-          <div className="relative">
-            <div className="w-16 h-16 border-4 border-[#FFB800]/20 border-t-[#FFB800] rounded-full animate-spin mx-auto" />
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="w-8 h-8 bg-[#FFB800]/10 rounded-full animate-pulse" />
+      <AnimatePresence>
+        {isValidating && (
+          <motion.div 
+            className="space-y-8 text-center py-12"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+          >
+            <div className="relative">
+              <div className="w-16 h-16 border-4 border-[#FFB800]/20 border-t-[#FFB800] rounded-full animate-spin mx-auto" />
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="w-8 h-8 bg-[#FFB800]/10 rounded-full animate-pulse" />
+              </div>
             </div>
-          </div>
-          <div>
-            <div className="text-xl font-medium text-[#FFB800] mb-3">
-              {isValidating ? 'Validando Gráfico' : 'Analisando...'}
-            </div>
-            <div className="text-[#FFB800]/60">
-              {isValidating ? validationMessage : (
-                <div className="space-y-2">
-                  {analysisSteps.map((step, index) => (
-                    <div key={index} className="flex items-center justify-center gap-2">
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      {step}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.2 }}
+            >
+              <div className="text-xl font-medium text-[#FFB800] mb-3">
+                Validando Gráfico
+              </div>
+              <div className="text-[#FFB800]/60">
+                {validationMessage}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+
+        {isAnalyzing && !showSuccess && (
+          <motion.div
+            key="analyzing"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="py-12"
+          >
+            <SignalAnimation step={currentStep} />
+          </motion.div>
+        )}
+
+        {showSuccess && (
+          <motion.div
+            key="success"
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.8, opacity: 0 }}
+            className="flex flex-col items-center justify-center py-12 space-y-4"
+          >
+            <motion.div
+              animate={{
+                scale: [1, 1.2, 1],
+                rotate: [0, 360],
+              }}
+              transition={{
+                duration: 1,
+                ease: "easeOut",
+              }}
+            >
+              <CheckCircle2 className="w-16 h-16 text-green-500" />
+            </motion.div>
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+              className="text-xl font-medium text-green-500"
+            >
+              Sinal Gerado com Sucesso!
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {!selectedImage && !isAnalyzing && (
         <div 
