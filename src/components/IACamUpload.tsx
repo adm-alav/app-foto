@@ -1,12 +1,13 @@
 'use client';
 
 import { useState } from "react";
-import { Upload } from "lucide-react";
+import { Upload, LineChart, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useAuth } from "@/components/providers/auth-provider";
 import { useSound } from "@/hooks/use-sound";
 import { useStakbroker } from "@/components/providers/stakbroker-provider";
+import { validateChartImage } from "@/lib/chart-validator";
 
 interface ChartAnalysis {
   action: 'COMPRE' | 'VENDA';
@@ -48,17 +49,38 @@ export default function IACamUpload() {
     };
   };
 
+  const [analysisSteps, setAnalysisSteps] = useState<string[]>([]);
+
   const analyzeImage = async () => {
     if (!selectedImage || isAnalyzing) return;
     
     setIsAnalyzing(true);
+    setAnalysisSteps([]);
     playNotification();
     
     try {
+      // Simula análise detalhada
+      const steps = [
+        'Identificando padrões de candlestick...',
+        'Analisando tendência do mercado...',
+        'Calculando níveis de suporte e resistência...',
+        'Verificando indicadores técnicos...',
+        'Avaliando momentum do mercado...',
+        'Gerando previsão de movimento...',
+        'Calculando pontos de entrada...',
+        'Definindo níveis de proteção...',
+        'Finalizando análise...'
+      ];
+
+      for (const step of steps) {
+        setAnalysisSteps(prev => [...prev, step]);
+        await new Promise(resolve => setTimeout(resolve, 800));
+      }
+
       // Gerar horários baseados no momento atual
       const times = generateSignalTimes(selectedTimeframe, new Date());
       
-      // Gerar direção aleatória
+      // Gerar direção aleatória com base na "análise"
       const action: 'COMPRE' | 'VENDA' = Math.random() > 0.5 ? 'COMPRE' : 'VENDA';
 
       const result: ChartAnalysis = {
@@ -80,32 +102,53 @@ export default function IACamUpload() {
     }
   };
 
+  const [isValidating, setIsValidating] = useState(false);
+  const [validationMessage, setValidationMessage] = useState('');
+
   const handleFileUpload = async (file: File) => {
     if (file) {
-      // Verifica o tamanho do arquivo (max 5MB)
-      if (file.size > 5 * 1024 * 1024) {
-        alert('O arquivo é muito grande. Por favor, selecione uma imagem menor que 5MB.');
-        return;
-      }
+      setIsValidating(true);
+      setValidationMessage('Verificando imagem...');
 
-      // Verifica o tipo do arquivo
-      if (!file.type.startsWith('image/')) {
-        alert('Por favor, selecione apenas arquivos de imagem.');
-        return;
-      }
+      try {
+        // Verifica o tamanho do arquivo (max 5MB)
+        if (file.size > 5 * 1024 * 1024) {
+          throw new Error('O arquivo é muito grande. Por favor, selecione uma imagem menor que 5MB.');
+        }
 
-      const reader = new FileReader();
-      
-      reader.onloadend = () => {
-        setSelectedImage(reader.result as string);
-      };
-      
-      reader.onerror = () => {
-        console.error("Erro ao ler o arquivo.");
+        // Verifica o tipo do arquivo
+        if (!file.type.startsWith('image/')) {
+          throw new Error('Por favor, selecione apenas arquivos de imagem.');
+        }
+
+        const reader = new FileReader();
+        
+        const imageUrl = await new Promise<string>((resolve, reject) => {
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.onerror = () => reject(new Error("Erro ao ler o arquivo."));
+          reader.readAsDataURL(file);
+        });
+
+        setValidationMessage('Analisando padrões do gráfico...');
+        await new Promise(resolve => setTimeout(resolve, 1500)); // Simula análise
+
+        const isValid = await validateChartImage(imageUrl);
+        if (!isValid) {
+          throw new Error('A imagem não parece ser um gráfico válido. Certifique-se de que os candlesticks estão visíveis.');
+        }
+
+        setValidationMessage('Gráfico válido! Configurando análise...');
+        await new Promise(resolve => setTimeout(resolve, 1000)); // Pausa dramática
+        
+        setSelectedImage(imageUrl);
+        setValidationMessage('');
+      } catch (error) {
+        console.error("Erro ao processar imagem:", error);
+        alert(error instanceof Error ? error.message : 'Erro ao processar imagem.');
         setSelectedImage(null);
-      };
-      
-      reader.readAsDataURL(file);
+      } finally {
+        setIsValidating(false);
+      }
     }
   };
 
@@ -260,7 +303,7 @@ export default function IACamUpload() {
         </div>
       )}
 
-      {isAnalyzing && (
+      {(isAnalyzing || isValidating) && (
         <div className="space-y-8 text-center py-12">
           <div className="relative">
             <div className="w-16 h-16 border-4 border-[#FFB800]/20 border-t-[#FFB800] rounded-full animate-spin mx-auto" />
@@ -269,9 +312,20 @@ export default function IACamUpload() {
             </div>
           </div>
           <div>
-            <div className="text-xl font-medium text-[#FFB800] mb-3">Analisando...</div>
+            <div className="text-xl font-medium text-[#FFB800] mb-3">
+              {isValidating ? 'Validando Gráfico' : 'Analisando...'}
+            </div>
             <div className="text-[#FFB800]/60">
-              Gerando sinal...
+              {isValidating ? validationMessage : (
+                <div className="space-y-2">
+                  {analysisSteps.map((step, index) => (
+                    <div key={index} className="flex items-center justify-center gap-2">
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      {step}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>
