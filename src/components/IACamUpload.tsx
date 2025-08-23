@@ -175,10 +175,17 @@ export default function IACamUpload() {
   };
 
   return (
-    <Card className="p-8 max-w-4xl mx-auto" style={{
-      background: 'linear-gradient(145deg, #1a1505, #1f1a08)',
-      boxShadow: '0 4px 60px rgba(255, 184, 0, 0.15)',
-    }}>
+    <div className="min-h-screen bg-gradient-background flex items-center justify-center p-4">
+      {/* Background decoration */}
+      <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute -top-40 -right-40 w-80 h-80 rounded-full bg-[#FFB800]/10 blur-3xl"></div>
+        <div className="absolute -bottom-40 -left-40 w-80 h-80 rounded-full bg-[#FFB800]/10 blur-3xl"></div>
+      </div>
+
+      <Card className="relative z-10 w-full max-w-4xl bg-gradient-card border-[#FFB800]/20 shadow-golden-lg p-8" style={{
+        background: 'linear-gradient(145deg, #1a1505, #1f1a08)',
+        boxShadow: '0 4px 60px rgba(255, 184, 0, 0.15)',
+      }}>
       <div className="fixed top-0 left-0 right-0 bg-gradient-to-r from-[#1a1505] to-[#1f1a08] border-b border-[#FFB800]/20 z-50">
         <div className="flex items-center justify-between max-w-7xl mx-auto px-6 py-4">
           <div className="flex items-center gap-3">
@@ -371,37 +378,64 @@ export default function IACamUpload() {
       </AnimatePresence>
 
       {!selectedImage && !isAnalyzing && (
-        <div 
-          className={`
-            border-2 border-dashed rounded-lg p-8 text-center space-y-4 cursor-pointer
-            transition-all duration-300 group
-            ${dragActive 
-              ? 'border-[#FFB800] bg-[#FFB800]/10' 
-              : 'border-[#FFB800]/20 hover:border-[#FFB800]/40 hover:bg-[#FFB800]/5'
-            }
-          `}
-          onDragOver={handleDrag}
-          onDragEnter={handleDrag}
-          onDragLeave={handleDrag}
-          onDrop={handleDrop}
-          onClick={() => (document.querySelector('input[type="file"]') as HTMLInputElement)?.click()}
-        >
-          <div className="w-16 h-16 rounded-full bg-[#FFB800]/10 flex items-center justify-center mx-auto group-hover:scale-110 transition-transform duration-300">
-            <Upload className="w-8 h-8 text-[#FFB800]/60" />
+        <div className="text-center space-y-8">
+          <div className="text-center mb-6">
+            <Upload className="w-8 h-8 text-[#FFB800] mx-auto mb-4" />
+            <h2 className="text-xl font-semibold text-[#FFB800] mb-2">Upload do Gráfico</h2>
+            <p className="text-[#FFB800]/60">Envie um screenshot de gráfico de candlestick</p>
           </div>
-          <div>
-            <h3 className="text-[#FFB800] text-xl mb-2">
-              {dragActive ? 'Solte o arquivo aqui' : 'Carregar Gráfico'}
-            </h3>
-            <div className="space-y-2">
-              <p className="text-[#FFB800]/60">
-                Arraste e solte ou clique para selecionar
+
+          <div
+            className={`
+              border-2 border-dashed rounded-lg p-8 text-center space-y-4 cursor-pointer
+              transition-all duration-300 group
+              ${dragActive
+                ? 'border-[#FFB800] bg-[#FFB800]/10'
+                : 'border-[#FFB800]/20 hover:border-[#FFB800]/40 hover:bg-[#FFB800]/5'
+              }
+            `}
+            onDragOver={handleDrag}
+            onDragEnter={handleDrag}
+            onDragLeave={handleDrag}
+            onDrop={handleDrop}
+            onClick={() => (document.querySelector('input[type="file"]') as HTMLInputElement)?.click()}
+          >
+            <div className="w-16 h-16 rounded-full bg-[#FFB800]/10 flex items-center justify-center mx-auto group-hover:scale-110 transition-transform duration-300">
+              <Upload className="w-8 h-8 text-[#FFB800]/60" />
+            </div>
+            <div>
+              <h3 className="text-[#FFB800] text-xl mb-2">
+                {dragActive ? 'Solte o arquivo aqui' : 'Clique para fazer upload'}
+              </h3>
+              <p className="text-[#FFB800]/60 mb-2">
+                PNG, JPG ou JPEG
               </p>
               <p className="text-[#FFB800]/40 text-sm">
-                Importante: O gráfico deve conter candlesticks visíveis
+                Screenshots de gráficos com velas vermelhas e verdes
               </p>
             </div>
           </div>
+
+          <div className="mt-6 p-4 bg-[#FFB800]/5 border border-[#FFB800]/20 rounded-lg">
+            <div className="flex items-start">
+              <div className="w-4 h-4 bg-[#FFB800] rounded-full flex-shrink-0 mt-0.5 mr-3"></div>
+              <div>
+                <p className="text-sm text-[#FFB800]/60">
+                  IA CAM 2.0 funciona exclusivamente na{" "}
+                  <span className="text-[#FFB800] font-medium underline cursor-pointer">
+                    STAK BROKER
+                  </span>
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="text-center mt-8">
+            <p className="text-xs text-[#FFB800]/40">
+              © 2025 IA CAM 2.0 - Todos os direitos reservados
+            </p>
+          </div>
+
           <input
             type="file"
             className="hidden"
@@ -413,20 +447,63 @@ export default function IACamUpload() {
 
       {analysisResult && (
         <div className="space-y-8">
-          <div className="bg-gradient-to-b from-[#FFB800]/10 to-transparent p-8 rounded-2xl">
-            <div className="space-y-4 text-[#FFB800]">
-              <p className="font-bold">CORRETORA RECOMENDADA: STAK BROKER</p>
-              <p>🥇 Moeda = {analysisResult.asset}</p>
-              <p>⏰ Expiração = {analysisResult.timeframe}</p>
-              <p>📌 Entrada = {analysisResult.entryTime}</p>
-              <p>{analysisResult.action === 'COMPRE' ? '✅COMPRA' : '❌VENDA'}</p>
-              <p></p>
-              <p>📌Proteção 1: {analysisResult.protection1}</p>
-              <p>📌Proteção 2: {analysisResult.protection2}</p>
-              <p></p>
-              <p>OBS: ENTREM 2s antes</p>
-              <p></p>
-              <p>⚠️ FAÇAM NO MÁXIMO DUAS PROTEÇÕES!</p>
+          <div className="bg-gradient-to-b from-[#FFB800]/10 to-transparent p-8 rounded-2xl border border-[#FFB800]/20">
+            <div className="relative">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-[#FFB800]/5 rounded-full blur-3xl"></div>
+              <div className="relative space-y-6 text-[#FFB800]">
+                <div className="flex items-center justify-between border-b border-[#FFB800]/20 pb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-[#FFB800]/10 flex items-center justify-center">
+                      <LineChart className="w-6 h-6 text-[#FFB800]" />
+                    </div>
+                    <div>
+                      <p className="font-bold text-lg">STAK BROKER</p>
+                      <p className="text-[#FFB800]/60 text-sm">CORRETORA RECOMENDADA</p>
+                    </div>
+                  </div>
+                  <div className="animate-pulse">
+                    <span className="text-2xl">✨</span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-[#FFB800]/5 rounded-lg p-4">
+                    <p className="text-[#FFB800]/60 text-sm mb-1">Moeda</p>
+                    <p className="font-medium text-lg">🥇 {analysisResult.asset}</p>
+                  </div>
+                  <div className="bg-[#FFB800]/5 rounded-lg p-4">
+                    <p className="text-[#FFB800]/60 text-sm mb-1">Expiração</p>
+                    <p className="font-medium text-lg">⏰ {analysisResult.timeframe}</p>
+                  </div>
+                </div>
+
+                <div className="bg-[#FFB800]/5 rounded-lg p-6 text-center">
+                  <p className="text-[#FFB800]/60 text-sm mb-2">Entrada</p>
+                  <p className="font-bold text-2xl">📌 {analysisResult.entryTime}</p>
+                  <div className="mt-4 inline-block px-6 py-2 rounded-full bg-[#FFB800]/10 font-medium">
+                    {analysisResult.action === 'COMPRE' ? '✅ COMPRA' : '❌ VENDA'}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-[#FFB800]/5 rounded-lg p-4">
+                    <p className="text-[#FFB800]/60 text-sm mb-1">Proteção 1</p>
+                    <p className="font-medium">📌 {analysisResult.protection1}</p>
+                  </div>
+                  <div className="bg-[#FFB800]/5 rounded-lg p-4">
+                    <p className="text-[#FFB800]/60 text-sm mb-1">Proteção 2</p>
+                    <p className="font-medium">📌 {analysisResult.protection2}</p>
+                  </div>
+                </div>
+
+                <div className="bg-[#FFB800]/5 rounded-lg p-4 border-l-4 border-[#FFB800]">
+                  <p className="font-medium mb-2">⚠️ Observações Importantes:</p>
+                  <ul className="space-y-2 text-[#FFB800]/80">
+                    <li>• ENTREM 2s antes do horário</li>
+                    <li>• FAÇAM NO MÁXIMO DUAS PROTEÇÕES!</li>
+                  </ul>
+                </div>
+              </div>
             </div>
           </div>
 
