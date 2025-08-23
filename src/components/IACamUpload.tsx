@@ -1,12 +1,11 @@
 'use client';
 
 import { useState } from "react";
-import { Upload } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useAuth } from "@/components/providers/auth-provider";
 import { useSound } from "@/hooks/use-sound";
 import { useStakbroker } from "@/components/providers/stakbroker-provider";
+import SignalConfig, { SignalConfig as SignalConfigType } from './signal-config';
 
 interface ChartAnalysis {
   action: 'COMPRE' | 'VENDA';
@@ -23,12 +22,44 @@ export default function IACamUpload() {
   const { logout } = useAuth();
   const { playNotification, playSuccess } = useSound();
   const { wallets, trades, openTrade, getCurrentPrice } = useStakbroker();
-  const [dragActive, setDragActive] = useState(false);
-  const [selectedImage, setSelectedImage] = useState<string | null>(null);
-  const [selectedAsset, setSelectedAsset] = useState('BTC/USD');
-  const [selectedTimeframe, setSelectedTimeframe] = useState('M1');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisResult, setAnalysisResult] = useState<ChartAnalysis | null>(null);
+
+  const handleGenerateSignal = async (config: SignalConfigType) => {
+    setIsAnalyzing(true);
+    playNotification();
+
+    try {
+      // Simular análise com base na configuração
+      const currentPrice = await getCurrentPrice('BTC/USD');
+      
+      const result: ChartAnalysis = {
+        action: config.direction === 'PUT' ? 'VENDA' : 'COMPRE',
+        asset: 'BTC/USD',
+        timeframe: config.timeframe,
+        entryTime: config.startTime,
+        confidence: config.percentage,
+        entryPrice: currentPrice,
+        protection1: config.startTime,
+        protection2: config.endTime
+      };
+
+      if (config.percentage > 85) {
+        const trade = await openTrade('BTC/USD', 1, config.direction === 'PUT' ? 'SELL' : 'BUY', currentPrice);
+        if (trade) {
+          playSuccess();
+        }
+      }
+
+      setAnalysisResult(result);
+      setIsAnalyzing(false);
+      playSuccess();
+    } catch (error) {
+      console.error('Erro ao gerar sinal:', error);
+      setIsAnalyzing(false);
+      alert(error instanceof Error ? error.message : 'Erro ao gerar sinal');
+    }
+  };
 
   const analyzeImage = async () => {
     if (!selectedImage || isAnalyzing) return;
@@ -248,196 +279,17 @@ export default function IACamUpload() {
               <span className="animate-pulse text-[#FFB800] text-3xl -rotate-12">✨</span>
             </div>
             <p className="text-[#FFB800]/60 max-w-md">
-              Upload sua imagem para análise instantânea com inteligência artificial
+              Gerador de Sinais Automático
             </p>
           </div>
         </div>
         <p className="text-[#FFB800]/80 text-lg font-medium">
-          Análise Automática de Sinais
+          Configuração de Sinais
         </p>
         <div className="w-24 h-1 bg-gradient-to-r from-transparent via-[#FFB800]/20 to-transparent mx-auto" />
       </div>
 
-      {selectedImage && (
-        <div className="mb-6 rounded-lg overflow-hidden bg-[#0a0a0a]">
-          <h3 className="text-[#FFB800] text-lg p-4 border-b border-[#FFB800]/20">
-            Gráfico Carregado
-          </h3>
-          <div className="p-4">
-            <img src={selectedImage} alt="Gráfico carregado" className="w-full rounded" />
-          </div>
-        </div>
-      )}
-
-      {selectedImage && !isAnalyzing && !analysisResult && (
-        <div className="mb-6 rounded-lg overflow-hidden bg-[#0a0a0a]">
-          <h3 className="text-[#FFB800] text-lg p-4 border-b border-[#FFB800]/20">
-            Configurar Análise
-          </h3>
-          <div className="p-4 space-y-4">
-            <div>
-              <p className="text-[#FFB800]/80 mb-3">Selecione o Ativo</p>
-              <div className="grid grid-cols-2 gap-3">
-                <Button 
-                  variant="outline"
-                  onClick={() => setSelectedAsset('BTC/USD')}
-                  className={`${
-                    selectedAsset === 'BTC/USD' 
-                      ? 'bg-[#FFB800]/20 text-[#FFB800] border-[#FFB800]' 
-                      : 'text-[#FFB800]/60 border-[#FFB800]/20 hover:border-[#FFB800]/40'
-                  }`}
-                >
-                  BTC/USD
-                </Button>
-                <Button 
-                  variant="outline"
-                  onClick={() => setSelectedAsset('XRP/USD')}
-                  className={`${
-                    selectedAsset === 'XRP/USD' 
-                      ? 'bg-[#FFB800]/20 text-[#FFB800] border-[#FFB800]' 
-                      : 'text-[#FFB800]/60 border-[#FFB800]/20 hover:border-[#FFB800]/40'
-                  }`}
-                >
-                  XRP/USD
-                </Button>
-                <Button 
-                  variant="outline"
-                  onClick={() => setSelectedAsset('BCH/USD')}
-                  className={`${
-                    selectedAsset === 'BCH/USD' 
-                      ? 'bg-[#FFB800]/20 text-[#FFB800] border-[#FFB800]' 
-                      : 'text-[#FFB800]/60 border-[#FFB800]/20 hover:border-[#FFB800]/40'
-                  }`}
-                >
-                  BCH/USD
-                </Button>
-                <Button 
-                  variant="outline"
-                  onClick={() => setSelectedAsset('ETH/USD')}
-                  className={`${
-                    selectedAsset === 'ETH/USD' 
-                      ? 'bg-[#FFB800]/20 text-[#FFB800] border-[#FFB800]' 
-                      : 'text-[#FFB800]/60 border-[#FFB800]/20 hover:border-[#FFB800]/40'
-                  }`}
-                >
-                  ETH/USD
-                </Button>
-              </div>
-            </div>
-
-            <div>
-              <p className="text-[#FFB800]/80 mb-3">Selecione o Timeframe</p>
-              <div className="grid grid-cols-3 gap-3">
-                <Button 
-                  variant="outline"
-                  onClick={() => setSelectedTimeframe('M1')}
-                  className={`${
-                    selectedTimeframe === 'M1' 
-                      ? 'bg-[#FFB800]/20 text-[#FFB800] border-[#FFB800]' 
-                      : 'text-[#FFB800]/60 border-[#FFB800]/20 hover:border-[#FFB800]/40'
-                  }`}
-                >
-                  M1
-                </Button>
-                <Button 
-                  variant="outline"
-                  onClick={() => setSelectedTimeframe('M2')}
-                  className={`${
-                    selectedTimeframe === 'M2' 
-                      ? 'bg-[#FFB800]/20 text-[#FFB800] border-[#FFB800]' 
-                      : 'text-[#FFB800]/60 border-[#FFB800]/20 hover:border-[#FFB800]/40'
-                  }`}
-                >
-                  M2
-                </Button>
-                <Button 
-                  variant="outline"
-                  onClick={() => setSelectedTimeframe('M5')}
-                  className={`${
-                    selectedTimeframe === 'M5' 
-                      ? 'bg-[#FFB800]/20 text-[#FFB800] border-[#FFB800]' 
-                      : 'text-[#FFB800]/60 border-[#FFB800]/20 hover:border-[#FFB800]/40'
-                  }`}
-                >
-                  M5
-                </Button>
-              </div>
-            </div>
-
-            <Button
-              onClick={analyzeImage}
-              disabled={isAnalyzing}
-              className={`w-full h-14 bg-[#FFB800] text-black ${
-                isAnalyzing ? 'opacity-50 cursor-not-allowed' : 'hover:bg-[#FFB800]/90 hover:scale-[1.02]'
-              } text-lg font-medium tracking-wider shadow-lg shadow-[#FFB800]/10 transition-all duration-300`}
-            >
-              {isAnalyzing ? 'ANALISANDO...' : 'INICIAR ANÁLISE'}
-            </Button>
-
-            <p className="text-[#FFB800]/60 text-sm text-center">
-              {isAnalyzing ? 'Aguarde enquanto analisamos seu gráfico' : 'Clique para analisar o gráfico'}
-            </p>
-          </div>
-        </div>
-      )}
-
-      {isAnalyzing ? (
-        <div className="space-y-8 text-center py-12">
-          <div className="relative">
-            <div className="w-16 h-16 border-4 border-[#FFB800]/20 border-t-[#FFB800] rounded-full animate-spin mx-auto" />
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="w-8 h-8 bg-[#FFB800]/10 rounded-full animate-pulse" />
-            </div>
-          </div>
-          <div>
-            <div className="text-xl font-medium text-[#FFB800] mb-3">Analisando...</div>
-            <div className="text-[#FFB800]/60 transition-all duration-300">
-              Processando sua análise...
-            </div>
-          </div>
-        </div>
-      ) : (
-        !selectedImage && (
-          <div 
-            className={`
-              border-2 border-dashed rounded-lg p-8 text-center space-y-4 cursor-pointer
-              transition-all duration-300 group
-              ${dragActive 
-                ? 'border-[#FFB800] bg-[#FFB800]/10' 
-                : 'border-[#FFB800]/20 hover:border-[#FFB800]/40 hover:bg-[#FFB800]/5'
-              }
-            `}
-            onDragOver={handleDrag}
-            onDragEnter={handleDrag}
-            onDragLeave={handleDrag}
-            onDrop={handleDrop}
-            onClick={() => (document.querySelector('input[type="file"]') as HTMLInputElement)?.click()}
-          >
-            <div className="w-16 h-16 rounded-full bg-[#FFB800]/10 flex items-center justify-center mx-auto group-hover:scale-110 transition-transform duration-300">
-              <Upload className="w-8 h-8 text-[#FFB800]/60" />
-            </div>
-            <div>
-              <h3 className="text-[#FFB800] text-xl mb-2">
-                {dragActive ? 'Solte o arquivo aqui' : 'Carregar Gráfico'}
-              </h3>
-              <div className="space-y-2">
-                <p className="text-[#FFB800]/60">
-                  Arraste e solte ou clique para selecionar
-                </p>
-                <p className="text-[#FFB800]/40 text-sm">
-                  Importante: Apenas imagens de gráficos com candlestick são aceitas
-                </p>
-              </div>
-            </div>
-            <input
-              type="file"
-              className="hidden"
-              accept="image/*"
-              onChange={handleFileSelect}
-            />
-          </div>
-        )
-      )}
+      <SignalConfig onGenerateSignal={handleGenerateSignal} />
 
       {analysisResult && (
         <div className="space-y-8">
